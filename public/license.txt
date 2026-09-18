@@ -1,0 +1,11 @@
+Model Information:
+* title:	Ashoka Chakra
+* source:	https://sketchfab.com/3d-models/ashoka-chakra-052439e9c1ab4c7894986a6b9842dc92
+* author:	threedxar (https://sketchfab.com/threedxar)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Ashoka Chakra" (https://sketchfab.com/3d-models/ashoka-chakra-052439e9c1ab4c7894986a6b9842dc92) by threedxar (https://sketchfab.com/threedxar) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
