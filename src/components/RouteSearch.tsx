@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -11,19 +11,22 @@ const customIcon = new L.Icon({
 });
 
 const RouteSearch = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [showContent, setShowContent] = useState(false);
+  const [phase, setPhase] = useState(0);
   const [route, setRoute] = useState('');
-  const defaultPosition: [number, number] = [28.6139, 77.2090]; // Delhi
+  const defaultPosition: [number, number] = [28.6139, 77.2090]; 
 
-  // Handle the sequence: Jump -> Expand -> Show Map
-  useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => setShowContent(true), 400); // Wait for jump animation
-    } else {
-      setShowContent(false);
+  const handleOpen = () => {
+    if (phase === 0) {
+      setPhase(1); // Step 1: Slide smoothly to exact center
+      setTimeout(() => setPhase(2), 300); // Step 2: Expand width (Search Bar)
+      setTimeout(() => setPhase(3), 600); // Step 3: Expand height (Reveal Map)
     }
-  }, [isOpen]);
+  };
+
+  const handleClose = () => {
+    setPhase(0); 
+    setTimeout(() => setRoute(''), 500); // Clear text after closing animation
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,68 +35,76 @@ const RouteSearch = () => {
 
   return (
     <>
-      {/* Dark Blur Background when Open */}
+      {/* Background Blur Overlay */}
       <div 
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-500 ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        onClick={() => setIsOpen(false)}
+        className={`fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-500 ease-out ${phase > 0 ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={handleClose}
       ></div>
 
-      {/* The Magic Animating Box */}
+      {/* The Master Animating Container */}
       <div 
-        className={`fixed z-50 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] overflow-hidden shadow-2xl flex items-center justify-center
-          ${isOpen 
-            ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] md:w-[700px] h-[550px] bg-white rounded-3xl' 
-            : 'top-[80%] right-6 md:right-10 w-16 h-16 bg-[#000080] text-white rounded-full hover:scale-110 cursor-pointer'
-          }`}
-        onClick={() => !isOpen && setIsOpen(true)}
+        onClick={() => phase === 0 && handleOpen()}
+        className={`fixed top-24 z-50 overflow-hidden shadow-2xl transition-all duration-400 ease-out flex items-center justify-center
+          ${phase === 0 ? 'right-6 translate-x-0 w-14 h-14 rounded-full bg-[#000080] text-white cursor-pointer hover:scale-110 hover:shadow-[0_0_20px_rgba(0,0,128,0.4)]' : ''}
+          ${phase === 1 ? 'right-1/2 translate-x-1/2 w-14 h-14 rounded-full bg-[#000080] text-white' : ''}
+          ${phase === 2 ? 'right-1/2 translate-x-1/2 w-[95vw] md:w-[650px] h-20 rounded-2xl bg-white' : ''}
+          ${phase === 3 ? 'right-1/2 translate-x-1/2 w-[95vw] md:w-[650px] h-[550px] rounded-2xl bg-white' : ''}
+        `}
       >
         
-        {/* State 1: Search Icon (Visible only when closed) */}
-        {!isOpen && (
-          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Phase 0 & 1: Search Icon (Centered perfectly) */}
+        <div className={`absolute transition-opacity duration-200 ${phase < 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-        )}
+        </div>
 
-        {/* State 2: Expanded Content (Search Bar & Map) */}
-        {isOpen && (
-          <div className={`w-full h-full p-6 flex flex-col transition-opacity duration-500 delay-200 ${showContent ? 'opacity-100' : 'opacity-0'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-blue-900">Live Track & Map</h2>
-              <button 
-                onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
-                className="bg-gray-100 hover:bg-gray-200 p-2 rounded-full text-gray-600 transition"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSearch} className="flex gap-3 mb-4">
+        {/* Phase 2 & 3: Content Mask (Fixed inner dimensions prevent layout thrashing) */}
+        <div className={`absolute top-0 w-[95vw] md:w-[650px] h-[550px] flex flex-col transition-opacity duration-300 ${phase >= 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          
+          {/* Top Section: Search Bar (Takes exactly 80px / h-20) */}
+          <div className="h-20 w-full p-4 flex items-center">
+            <form onSubmit={handleSearch} className="flex-1 flex gap-2 h-full">
               <input 
                 type="text" 
                 placeholder="Enter Bus No. or Metro Line" 
-                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF9933] text-gray-700"
+                className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF9933] text-gray-700 font-medium transition-shadow"
                 value={route}
                 onChange={(e) => setRoute(e.target.value)}
+                autoFocus={phase === 2}
               />
-              <button type="submit" className="bg-[#138808] hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl shadow-md transition">
+              <button type="submit" className="bg-[#138808] hover:bg-green-700 text-white font-bold px-6 py-2 rounded-xl shadow-sm transition-colors">
                 Search
               </button>
             </form>
+            <button 
+              onClick={(e) => { e.stopPropagation(); handleClose(); }}
+              className="ml-2 bg-gray-100 hover:bg-red-50 hover:text-red-600 p-3 rounded-xl text-gray-500 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
 
-            {/* Render Map only when content is ready so it sizes correctly */}
-            {showContent && (
-              <div className="relative w-full flex-1 rounded-xl overflow-hidden border border-gray-200 z-0">
+          {/* Bottom Section: Map Container */}
+          <div className="w-full flex-1 px-4 pb-4">
+            <div className="relative w-full h-full rounded-xl overflow-hidden border border-gray-200 bg-gray-50 shadow-inner">
+              {/* Only mount Leaflet when phase >= 2 to avoid resize glitch */}
+              {phase >= 2 && (
                 <MapContainer center={defaultPosition} zoom={13} className="w-full h-full">
                   <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   <Marker position={defaultPosition} icon={customIcon}>
-                    <Popup className="font-semibold">Bus 402 - <span className="text-red-600">Packed</span></Popup>
+                    <Popup className="font-semibold text-center">
+                      <span className="text-[#FF9933]">Citizen Swidha</span><br />
+                      <span className="text-blue-900">Bus 402</span><br />
+                      Status: <span className="text-red-600">Packed</span>
+                    </Popup>
                   </Marker>
                 </MapContainer>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        )}
+
+        </div>
       </div>
     </>
   );
